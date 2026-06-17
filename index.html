@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="app-version" content="safety-raceway-improved" />
+  <title>Safety Raceway: Fatigue Awareness</title>
+  <style>
+    :root {
+      --panel: rgba(10, 16, 28, 0.9);
+      --yellow: #ffd23f;
+      --purple: #7c3aed;
+      --danger: #ef4444;
+      --safe: #22c55e;
+      --sky: #78c7ff;
+      --grass: #55b84d;
+      --line: #f8fafc;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #06111f;
+      color: #f8fafc;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      touch-action: none;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: .95rem 1.25rem;
+      min-height: 52px;
+      background: var(--yellow);
+      color: #111827;
+      font: inherit;
+      font-weight: 1000;
+      cursor: pointer;
+      box-shadow: 0 7px 0 #a16207, 0 18px 32px rgba(0,0,0,.32);
+    }
+
+    button:focus-visible {
+      outline: 4px solid #fff;
+      outline-offset: 4px;
+    }
+
+    button:active { transform: translateY(3px); box-shadow: 0 4px 0 #a16207; }
+
+    #gameShell {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+      min-height: 100vh;
+      background: linear-gradient(var(--sky) 0 56%, var(--grass) 56% 100%);
+      image-rendering: pixelated;
+      isolation: isolate;
+    }
+
+    canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+      image-rendering: pixelated;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+      display: grid;
+      grid-template-columns: minmax(210px, 320px) 1fr minmax(210px, 300px);
+      gap: .75rem;
+      align-items: start;
+      padding: max(.65rem, env(safe-area-inset-top)) .65rem .65rem;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 2px solid rgba(255,255,255,.18);
+      border-radius: 16px;
+      padding: .85rem;
+      box-shadow: 0 12px 32px rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      gap: .75rem;
+      margin-bottom: .45rem;
+      color: #dbeafe;
+      font-weight: 700;
+    }
+
+    .stat strong { color: white; }
+
+    .meter {
+      height: 15px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255,255,255,.17);
+      margin: .35rem 0 .7rem;
+    }
+
+    .meter span {
+      display: block;
+      height: 100%;
+      width: var(--fatigue, 0%);
+      background: linear-gradient(90deg, var(--safe), #facc15, var(--danger));
+      transition: width .15s linear;
+    }
+
+    .messageStack {
+      justify-self: center;
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+      align-items: center;
+      width: min(44rem, 100%);
+    }
+
+    .toast {
+      padding: .7rem 1rem;
+      border: 2px solid rgba(255,255,255,.25);
+      border-radius: 999px;
+      background: rgba(127, 29, 29, .94);
+      font-weight: 1000;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      box-shadow: 0 10px 28px rgba(0,0,0,.35);
+      animation: toast 3s ease forwards;
+    }
+
+    @keyframes toast {
+      0% { opacity: 0; transform: translateY(-10px) scale(.98); }
+      12%, 78% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-10px) scale(.98); }
+    }
+
+    .blackout {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      background: #000;
+      color: white;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .05s linear;
+      text-align: center;
+      font-weight: 1000;
+      font-size: clamp(2.2rem, 10vw, 6rem);
+      letter-spacing: .08em;
+    }
+
+    .blackout.active { opacity: 1; }
+    .blackout small { display: block; margin-top: .4rem; font-size: .22em; color: #fde68a; }
+
+    .modal {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: grid;
+      place-items: center;
+      padding: 1rem;
+      background: radial-gradient(circle at center, rgba(30,41,59,.62), rgba(2,6,23,.94));
+    }
+
+    .card {
+      width: min(900px, 96vw);
+      max-height: 92dvh;
+      overflow: auto;
+      border-radius: 24px;
+      border: 3px solid rgba(255,255,255,.18);
+      background: rgba(8, 13, 24, .97);
+      padding: clamp(1.1rem, 3vw, 2.2rem);
+      box-shadow: 0 30px 90px rgba(0,0,0,.55);
+    }
+
+    h1, h2 { margin: 0 0 .8rem; }
+    h1 { font-size: clamp(2rem, 6vw, 4rem); color: var(--yellow); text-shadow: 4px 4px 0 var(--purple); }
+    h2 { color: #fff; }
+    p, li { color: #dbeafe; line-height: 1.55; }
+    ul { padding-left: 1.25rem; }
+
+    .heroPreview {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .driverBadge {
+      width: 145px;
+      height: 145px;
+      border-radius: 28px;
+      border: 4px solid var(--yellow);
+      background:
+        radial-gradient(circle at 48% 35%, #f8c78b 0 26%, transparent 27%),
+        radial-gradient(ellipse at 38% 45%, #1f2937 0 10%, transparent 11%),
+        radial-gradient(ellipse at 58% 45%, #1f2937 0 10%, transparent 11%),
+        radial-gradient(ellipse at 50% 58%, #111827 0 22%, transparent 23%),
+        linear-gradient(135deg, var(--yellow) 0 50%, var(--purple) 50% 100%);
+      box-shadow: 8px 8px 0 rgba(0,0,0,.35);
+    }
+
+    #startBtn, #restartBtn { width: 100%; margin-top: 1rem; font-size: 1.12rem; }
+
+    .touchControls {
+      position: absolute;
+      inset: auto max(1rem, env(safe-area-inset-right)) max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+      z-index: 6;
+      display: none;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .touchBtn {
+      pointer-events: auto;
+      width: clamp(78px, 22vw, 118px);
+      height: clamp(78px, 22vw, 118px);
+      border-radius: 24px;
+      border: 3px solid rgba(255,255,255,.24);
+      background: rgba(15, 23, 42, .78);
+      color: white;
+      font-size: clamp(2rem, 10vw, 3.4rem);
+      box-shadow: 0 14px 34px rgba(0,0,0,.38);
+    }
+
+    .hidden { display: none !important; }
+    .srOnly { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+    @media (max-width: 820px), (pointer: coarse) {
+      .hud { grid-template-columns: 1fr; padding: .5rem; }
+      .panel.secondary { display: none; }
+      .panel { padding: .65rem; }
+      .stat { font-size: .84rem; margin-bottom: .3rem; }
+      .messageStack { align-items: flex-start; }
+      .touchControls { display: flex; }
+      .heroPreview { grid-template-columns: 1fr; }
+      .driverBadge { width: 105px; height: 105px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .toast, .meter span { animation: none; transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main id="gameShell" aria-label="Safety Raceway fatigue-awareness kart driving game">
+    <canvas id="gameCanvas" aria-hidden="true"></canvas>
+
+    <section class="hud" aria-label="Race status">
+      <div class="panel">
+        <div class="stat"><span>Time</span><strong id="timeText">120.0s</strong></div>
+        <div class="stat"><span>Fatigue</span><strong id="fatigueText">0%</strong></div>
+        <div class="meter" role="meter" aria-label="Fatigue level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="fatigueBar"></span></div>
+        <div class="stat"><span>Microsleeps</span><strong id="sleepText">0</strong></div>
+        <div class="stat"><span>Off track</span><strong id="offTrackText">0</strong></div>
+      </div>
+      <div id="messageStack" class="messageStack" aria-live="polite" aria-atomic="true"></div>
+      <div class="panel secondary">
+        <div class="stat"><span>Controls</span><strong>WASD / arrows</strong></div>
+        <div class="stat"><span>Goal</span><strong>Race clean for 120s</strong></div>
+        <div class="stat"><span>Pause</span><strong>P or Esc</strong></div>
+      </div>
+    </section>
+
+    <section class="touchControls" aria-label="Mobile steering controls">
+      <button class="touchBtn" id="leftTouch" aria-label="Steer left" type="button">‹</button>
+      <button class="touchBtn" id="rightTouch" aria-label="Steer right" type="button">›</button>
+    </section>
+
+    <div class="blackout" id="blackout" role="status" aria-live="assertive"><div>MICROSLEEP<small id="blackoutText">0.1s loss of control</small></div></div>
+
+    <section class="modal" id="startModal" aria-labelledby="startTitle">
+      <div class="card">
+        <div class="heroPreview">
+          <div>
+            <h1 id="startTitle">Safety Raceway</h1>
+            <p>Race as an original yellow-and-purple mustached driver in a small kart. The course is playful and bright, but the lesson is serious: fatigue and microsleeps can quickly take away control.</p>
+            <ul>
+              <li>Automatic forward motion; steer with <strong>WASD</strong>, <strong>arrow keys</strong>, or touch buttons.</li>
+              <li>Avoid banana peels and green shell roadway hazards; strike icons show impacts and near misses.</li>
+              <li>The full run lasts exactly <strong>120 seconds</strong>, and microsleeps begin <strong>5 seconds</strong> after the race starts.</li>
+              <li>Use <strong>P</strong> or <strong>Esc</strong> to pause if you need a break.</li>
+              <li>No copyrighted characters, names, music, logos, tracks, or assets are used.</li>
+            </ul>
+          </div>
+          <div class="driverBadge" aria-hidden="true"></div>
+        </div>
+        <button id="startBtn" type="button">Start Safety Raceway</button>
+      </div>
+    </section>
+
+    <section class="modal hidden" id="endModal" aria-labelledby="endTitle">
+      <div class="card">
+        <h2 id="endTitle">Training Debrief</h2>
+        <p id="summaryText"></p>
+        <div id="results"></div>
+        <ul>
+          <li>Fatigue reduces reaction time.</li>
+          <li>Microsleeps can happen without warning.</li>
+          <li>Even a one-second lapse can cause lane departure or collision.</li>
+          <li>Coffee, loud music, and open windows are not substitutes for sleep.</li>
+          <li>If you are too tired to drive safely, stop, rest, and notify your supervisor.</li>
+        </ul>
+        <button id="restartBtn" type="button">Race Again</button>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const $ = id => document.getElementById(id);
+    const canvas = $('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const ui = {
+      timeText: $('timeText'), fatigueText: $('fatigueText'), fatigueBar: $('fatigueBar'),
+      sleepText: $('sleepText'), offTrackText: $('offTrackText'), messageStack: $('messageStack'),
+      blackout: $('blackout'), blackoutText: $('blackoutText'), startModal: $('startModal'),
+      endModal: $('endModal'), summaryText: $('summaryText'), results: $('results'),
+      fatigueMeter: document.querySelector('.meter')
+    };
+
+    const GAME_LENGTH = 120;
+    const keys = new Set();
+    const aiKarts = [];
+    const hazards = [];
+    let width = 1280;
+    let height = 720;
+    let state = createState(false);
+
+    function createState(running = true) {
+      return {
+        running, paused: false, elapsed: 0, distance: 0, speed: 330, playerX: 0,
+        steeringVelocity: 0, fatigue: 0, microsleeps: 0, nextMicrosleep: 5,
+        blackout: false, blackoutUntil: 0, currentBlackout: 0, totalImpaired: 0,
+        longestBlackout: 0, offTrackEvents: 0, wasOffTrack: false, collisions: 0,
+        nearMisses: 0, strikeIcons: [], lastTime: performance.now()
+      };
+    }
+
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+    function randomBetween(min, max) { return min + Math.random() * (max - min); }
+
+    function resizeCanvas() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      canvas.width = Math.floor(window.innerWidth * dpr);
+      canvas.height = Math.floor(window.innerHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      width = window.innerWidth;
+      height = window.innerHeight;
+    }
+
+    function resetGame() {
+      state = createState(true);
+      aiKarts.length = 0;
+      hazards.length = 0;
+      setupStartingGrid();
+      setupCourseHazards();
+      updateHud();
+      clearToasts();
+      showToast('Safety message: tired driving is dangerous.');
+    }
+
+    function setupStartingGrid() {
+      [
+        { x: -0.72, y: -70, speed: 342, color: '#38bdf8' }, { x: 0.72, y: -70, speed: 334, color: '#ef4444' },
+        { x: -0.38, y: -185, speed: 352, color: '#22c55e' }, { x: 0.38, y: -185, speed: 346, color: '#f97316' },
+        { x: -0.08, y: -310, speed: 360, color: '#e879f9' }, { x: 0.86, y: -430, speed: 338, color: '#f8fafc' }
+      ].forEach(racer => aiKarts.push({ ...racer, baseX: racer.x, nearMissed: false }));
+    }
+
+    function setupCourseHazards() {
+      [
+        { type: 'banana', x: -0.55, y: -520 }, { type: 'greenShell', x: 0.48, y: -860 },
+        { type: 'banana', x: 0.05, y: -1220 }, { type: 'greenShell', x: -0.82, y: -1580 },
+        { type: 'banana', x: 0.78, y: -1960 }, { type: 'greenShell', x: -0.18, y: -2340 }
+      ].forEach(hazard => hazards.push({ ...hazard, spin: 0, hit: false }));
+    }
+
+    function addStrikeIcon(label, color = '#ef4444') {
+      state.strikeIcons.push({ label, color, age: 0, x: randomBetween(0.39, 0.61), y: 0.28 });
+      state.strikeIcons = state.strikeIcons.slice(-6);
+    }
+
+    function microsleepDurationFor(elapsed) {
+      if (elapsed < 30) return randomBetween(0.1, 0.25);
+      if (elapsed < 60) return randomBetween(0.25, 0.5);
+      if (elapsed < 90) return randomBetween(0.5, 0.8);
+      return randomBetween(0.8, 1.2);
+    }
+
+    function microsleepGapFor(elapsed) {
+      if (elapsed < 30) return randomBetween(8, 12);
+      if (elapsed < 60) return randomBetween(5.5, 8);
+      if (elapsed < 90) return randomBetween(3.5, 5.3);
+      return randomBetween(1.8, 3);
+    }
+
+    function startMicrosleep() {
+      state.blackout = true;
+      state.microsleeps += 1;
+      state.currentBlackout = microsleepDurationFor(state.elapsed);
+      state.longestBlackout = Math.max(state.longestBlackout, state.currentBlackout);
+      state.totalImpaired += state.currentBlackout;
+      state.blackoutUntil = state.elapsed + state.currentBlackout;
+      ui.blackoutText.textContent = `${state.currentBlackout.toFixed(1)}s without steering`;
+      ui.blackout.classList.add('active');
+      showToast('Microsleep! You lost control for a moment. Pull over and rest.');
+    }
+
+    function endMicrosleep() {
+      state.blackout = false;
+      ui.blackout.classList.remove('active');
+      state.nextMicrosleep = state.elapsed + microsleepGapFor(state.elapsed);
+    }
+
+    function clearToasts() { ui.messageStack.replaceChildren(); }
+
+    function showToast(text) {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.textContent = text;
+      ui.messageStack.prepend(toast);
+      window.setTimeout(() => toast.remove(), 3100);
+    }
+
+    function togglePause() {
+      if (!state.running) return;
+      state.paused = !state.paused;
+      state.lastTime = performance.now();
+      showToast(state.paused ? 'Paused. Rest breaks matter.' : 'Race resumed.');
+    }
+
+    function update(dt) {
+      if (state.paused) return;
+      state.elapsed = Math.min(GAME_LENGTH, state.elapsed + dt);
+      state.distance += state.speed * dt;
+      state.fatigue = Math.min(100, (state.elapsed / GAME_LENGTH) * 100);
+
+      const input = (keys.has('ArrowRight') || keys.has('d') || keys.has('D') || keys.has('touchRight') ? 1 : 0) -
+        (keys.has('ArrowLeft') || keys.has('a') || keys.has('A') || keys.has('touchLeft') ? 1 : 0);
+
+      if (state.blackout) {
+        state.steeringVelocity += (Math.sin(state.elapsed * 5.5 + state.microsleeps) > 0 ? 1 : -1) * 0.95 * dt;
+        if (state.elapsed >= state.blackoutUntil) endMicrosleep();
+      } else {
+        state.steeringVelocity += input * 2.6 * dt;
+        state.steeringVelocity *= Math.pow(0.035, dt);
+        if (state.elapsed >= state.nextMicrosleep) startMicrosleep();
+      }
+
+      state.playerX = clamp(state.playerX + state.steeringVelocity * dt, -1.55, 1.55);
+      updateAi(dt);
+      updateHazards(dt);
+      updateStrikeIcons(dt);
+      detectTrackAndTraffic();
+      updateHud();
+      if (state.elapsed >= GAME_LENGTH) endGame();
+    }
+
+    function updateAi(dt) {
+      for (const kart of aiKarts) {
+        kart.y += (state.speed - kart.speed + 150) * dt;
+        kart.x = kart.baseX + Math.sin((state.distance + kart.y) * 0.004) * 0.12;
+        if (kart.y > 420) { kart.y -= 2400; kart.nearMissed = false; }
+      }
+    }
+
+    function updateHazards(dt) {
+      for (const hazard of hazards) {
+        hazard.y += (state.speed + 90) * dt;
+        hazard.spin += dt * 5;
+        if (hazard.y > 420) { hazard.y -= 2600; hazard.hit = false; }
+      }
+    }
+
+    function updateStrikeIcons(dt) {
+      state.strikeIcons.forEach(icon => { icon.age += dt; });
+      state.strikeIcons = state.strikeIcons.filter(icon => icon.age < 1.8);
+    }
+
+    function detectTrackAndTraffic() {
+      const offTrack = Math.abs(state.playerX) > 1.05;
+      if (offTrack && !state.wasOffTrack) { state.offTrackEvents += 1; showToast('Off track! Fatigue makes recovery harder.'); }
+      state.wasOffTrack = offTrack;
+
+      for (const kart of aiKarts) {
+        if (kart.y <= -20 || kart.y >= 135) continue;
+        const gap = Math.abs(kart.x - state.playerX);
+        if (gap < 0.18) { state.collisions += 1; addStrikeIcon('CRASH'); showToast('Kart collision! A brief lapse can be enough.'); kart.y -= 1200; }
+        else if (gap < 0.32 && !kart.nearMissed) { kart.nearMissed = true; state.nearMisses += 1; addStrikeIcon('NEAR MISS', '#f59e0b'); showToast('Near miss with another racer!'); }
+      }
+
+      for (const hazard of hazards) {
+        if (hazard.hit || hazard.y <= -30 || hazard.y >= 120) continue;
+        const gap = Math.abs(hazard.x - state.playerX);
+        if (gap < 0.2) {
+          hazard.hit = true; state.collisions += 1; state.steeringVelocity += hazard.type === 'banana' ? 1.35 : -1.35;
+          addStrikeIcon(hazard.type === 'banana' ? 'BANANA' : 'SHELL', hazard.type === 'banana' ? '#facc15' : '#22c55e');
+          showToast(hazard.type === 'banana' ? 'Banana peel hazard! Loss of traction.' : 'Green shell hazard! Sudden swerve.');
+        } else if (gap < 0.34) {
+          hazard.hit = true; state.nearMisses += 1; addStrikeIcon('DODGED', '#38bdf8'); showToast('Near miss with a roadway hazard.');
+        }
+      }
+    }
+
+    function updateHud() {
+      const fatigue = Math.round(state.fatigue);
+      ui.timeText.textContent = `${Math.max(0, GAME_LENGTH - state.elapsed).toFixed(1)}s`;
+      ui.fatigueText.textContent = `${fatigue}%`;
+      ui.fatigueBar.style.setProperty('--fatigue', `${state.fatigue}%`);
+      ui.fatigueMeter.setAttribute('aria-valuenow', String(fatigue));
+      ui.sleepText.textContent = state.microsleeps;
+      ui.offTrackText.textContent = state.offTrackEvents;
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      drawSkyAndStadium(); drawTrack(); drawHazards(); drawAiKarts(); drawPlayerKart(); drawStrikeIcons(); drawOverlayText();
+      if (state.paused) drawPausedOverlay();
+    }
+
+    function drawSkyAndStadium() {
+      ctx.fillStyle = '#78c7ff'; ctx.fillRect(0, 0, width, height * 0.56);
+      ctx.fillStyle = '#fff3a3'; ctx.beginPath(); ctx.arc(width * 0.78, height * 0.13, 34, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#334155'; ctx.fillRect(0, height * 0.34, width, height * 0.1);
+      for (let i = 0; i < 12; i += 1) { ctx.fillStyle = i % 2 ? '#7c3aed' : '#ffd23f'; ctx.fillRect(i * width / 12 + 8, height * 0.355, width / 14, 20); }
+      ctx.fillStyle = '#55b84d'; ctx.fillRect(0, height * 0.44, width, height * 0.56);
+    }
+
+    function getRoadCurve(distance) { return Math.sin(distance * 0.0017) * 0.75 + Math.sin(distance * 0.0043) * 0.25; }
+
+    function drawTrack() {
+      const horizon = height * 0.42, bottom = height, playerX = state.playerX || 0, distance = state.distance || 0;
+      const center = width / 2 - playerX * width * 0.08, curve = getRoadCurve(distance) * width * 0.16;
+      const leftTop = center - width * 0.12 + curve, rightTop = center + width * 0.12 + curve, leftBottom = width * 0.06, rightBottom = width * 0.94;
+      ctx.fillStyle = '#2f6b35'; ctx.fillRect(0, horizon, width, bottom - horizon);
+      const gradient = ctx.createLinearGradient(0, horizon, 0, bottom); gradient.addColorStop(0, '#6b7280'); gradient.addColorStop(0.45, '#4b5563'); gradient.addColorStop(1, '#2f3540');
+      ctx.fillStyle = gradient; ctx.beginPath(); ctx.moveTo(leftTop, horizon); ctx.lineTo(rightTop, horizon); ctx.lineTo(rightBottom, bottom); ctx.lineTo(leftBottom, bottom); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.06)';
+      for (let i = 0; i < 9; i += 1) { const t = i / 8, y = horizon + (bottom - horizon) * t, left = leftTop + (leftBottom - leftTop) * t, right = rightTop + (rightBottom - rightTop) * t; ctx.fillRect(left, y, right - left, 2 + t * 8); }
+      drawGuardRail(leftTop, rightTop, leftBottom, rightBottom, horizon, bottom); drawLaneMarkers(center + curve, horizon, bottom); drawTrackSigns(horizon);
+    }
+
+    function drawGuardRail(leftTop, rightTop, leftBottom, rightBottom, horizon, bottom) {
+      ctx.strokeStyle = '#f8fafc'; ctx.lineWidth = 6; ctx.beginPath(); ctx.moveTo(leftTop - 18, horizon); ctx.lineTo(leftBottom - 12, bottom); ctx.moveTo(rightTop + 18, horizon); ctx.lineTo(rightBottom + 12, bottom); ctx.stroke();
+      for (let i = 0; i < 18; i += 1) { const t = i / 17, y = horizon + (bottom - horizon) * t, railWidth = 24 + t * 16; ctx.fillStyle = i % 2 ? '#ef4444' : '#f8fafc'; ctx.fillRect(leftTop + (leftBottom - leftTop) * t - 28, y, railWidth, 8 + t * 10); ctx.fillRect(rightTop + (rightBottom - rightTop) * t + 28 - railWidth, y, railWidth, 8 + t * 10); }
+    }
+
+    function drawLaneMarkers(center, horizon, bottom) {
+      for (let i = 0; i < 16; i += 1) { const t = ((i * 90 + state.distance) % 900) / 900, y = horizon + (bottom - horizon) * t, scale = t * t; ctx.fillStyle = '#f8fafc'; ctx.fillRect(center - (8 + scale * 26) / 2, y, 8 + scale * 26, 18 + scale * 72); }
+    }
+
+    function drawTrackSigns(horizon) {
+      ['REST AREA', 'SAFETY RACEWAY', 'FATIGUE = DANGER'].forEach((sign, i) => { const x = width * (0.18 + i * 0.31), signY = horizon - 42; ctx.fillStyle = i === 1 ? '#ffd23f' : '#7c3aed'; ctx.fillRect(x - 80, signY, 160, 34); ctx.strokeStyle = '#111827'; ctx.lineWidth = 3; ctx.strokeRect(x - 80, signY, 160, 34); ctx.fillStyle = i === 1 ? '#111827' : '#ffffff'; ctx.font = 'bold 14px Arial'; ctx.textAlign = 'center'; ctx.fillText(sign, x, signY + 22); });
+    }
+
+    function projectKart(xNorm, yTrack) {
+      const t = clamp((yTrack + 1250) / 1550, 0.05, 1), y = height * 0.42 + (height * 0.53) * t;
+      const roadHalf = width * (0.12 + 0.38 * t), curve = getRoadCurve(state.distance + yTrack) * width * 0.16 * (1 - t);
+      return { x: width / 2 + curve + xNorm * roadHalf - state.playerX * width * 0.03 * (1 - t), y, scale: 0.25 + t * 1.35 };
+    }
+
+    function drawHazards() {
+      const source = hazards.length ? hazards : [{ type: 'banana', x: -0.45, y: -180, spin: 0 }, { type: 'greenShell', x: 0.52, y: -360, spin: 0.8 }];
+      source.forEach(hazard => { const p = projectKart(hazard.x, hazard.y); if (p.y >= height * 0.42 && p.y <= height + 120) drawHazard(p.x, p.y, p.scale, hazard.type, hazard.spin || 0); });
+    }
+
+    function drawAiKarts() {
+      const source = aiKarts.length ? aiKarts : [{ x: -0.55, y: -110, color: '#38bdf8' }, { x: 0.4, y: -260, color: '#ef4444' }, { x: 0.05, y: -520, color: '#22c55e' }];
+      [...source].sort((a, b) => a.y - b.y).forEach(kart => { const p = projectKart(kart.x, kart.y); if (p.y >= height * 0.42 && p.y <= height + 120) drawKart(p.x, p.y, p.scale, kart.color, '#111827', false); });
+    }
+
+    function drawPlayerKart() { drawKart(width / 2, height * 0.78 + Math.sin(state.distance * 0.04) * 3, 1.32, '#ffd23f', '#7c3aed', true); }
+
+    function drawStrikeIcons() {
+      state.strikeIcons.forEach(icon => { const alpha = Math.max(0, 1 - icon.age / 1.8), pop = 1 + Math.sin(icon.age * Math.PI * 4) * 0.08; ctx.save(); ctx.globalAlpha = alpha; ctx.translate(width * icon.x, height * (icon.y - icon.age * 0.06)); ctx.scale(pop, pop); ctx.fillStyle = icon.color; ctx.strokeStyle = '#111827'; ctx.lineWidth = 5; ctx.beginPath(); for (let i = 0; i < 12; i += 1) { const angle = Math.PI * 2 * i / 12, radius = i % 2 ? 44 : 58; ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'white'; ctx.font = '900 17px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon.label, 0, 0); ctx.restore(); });
+    }
+
+    function drawHazard(x, y, scale, type, spin) {
+      ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); ctx.rotate(type === 'greenShell' ? spin : 0); ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.fillRect(-20, 16, 40, 8);
+      if (type === 'banana') { ctx.fillStyle = '#fde047'; ctx.beginPath(); ctx.moveTo(-18, 12); ctx.quadraticCurveTo(0, -26, 18, 12); ctx.lineTo(7, 16); ctx.quadraticCurveTo(0, -6, -7, 16); ctx.closePath(); ctx.fill(); ctx.fillStyle = '#92400e'; ctx.fillRect(-3, -23, 6, 9); }
+      else { ctx.fillStyle = '#16a34a'; ctx.beginPath(); ctx.ellipse(0, 0, 25, 19, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#052e16'; ctx.lineWidth = 5; ctx.stroke(); ctx.fillStyle = '#bbf7d0'; ctx.fillRect(-10, -8, 20, 16); }
+      ctx.restore();
+    }
+
+    function drawKart(x, y, scale, bodyColor, accentColor, player) {
+      ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); ctx.fillStyle = 'rgba(0,0,0,.28)'; ctx.fillRect(-34, 30, 68, 12); ctx.fillStyle = '#111827'; ctx.fillRect(-42, 6, 18, 32); ctx.fillRect(24, 6, 18, 32);
+      const kartGradient = ctx.createLinearGradient(-34, -18, 34, 36); kartGradient.addColorStop(0, '#ffffff'); kartGradient.addColorStop(0.12, bodyColor); kartGradient.addColorStop(1, bodyColor); ctx.fillStyle = kartGradient; ctx.fillRect(-34, -18, 68, 54);
+      ctx.fillStyle = accentColor; ctx.fillRect(-26, -30, 52, 24); ctx.fillStyle = '#f7c58d'; ctx.fillRect(-19, -55, 38, 32); ctx.fillStyle = '#111827'; ctx.fillRect(-24, -39, 48, 9); ctx.fillStyle = player ? '#7c3aed' : '#e5e7eb'; ctx.fillRect(-30, 18, 60, 10); ctx.fillStyle = '#fef3c7'; ctx.fillRect(-27, 28, 11, 8); ctx.fillRect(16, 28, 11, 8); ctx.restore();
+    }
+
+    function drawOverlayText() { ctx.fillStyle = 'rgba(255,255,255,.78)'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center'; ctx.fillText('Safety Raceway: race the AI karts, avoid banana peels and green shell hazards', width / 2, height - 18); }
+
+    function drawPausedOverlay() { ctx.fillStyle = 'rgba(2,6,23,.65)'; ctx.fillRect(0, 0, width, height); ctx.fillStyle = '#fff'; ctx.font = '900 48px Arial'; ctx.textAlign = 'center'; ctx.fillText('PAUSED', width / 2, height / 2); }
+
+    function appendResult(label, value) {
+      const li = document.createElement('li'); li.append(`${label}: `); const strong = document.createElement('strong'); strong.textContent = value; li.append(strong); return li;
+    }
+
+    function endGame() {
+      state.running = false; state.blackout = false; ui.blackout.classList.remove('active');
+      ui.summaryText.textContent = 'The 120-second Safety Raceway run is complete. Review how fatigue and microsleeps affected control.';
+      const heading = document.createElement('h2'); heading.textContent = 'Your Results';
+      const list = document.createElement('ul');
+      list.append(appendResult('Microsleeps', state.microsleeps), appendResult('Off-track events', state.offTrackEvents), appendResult('Collisions / hazards hit', state.collisions), appendResult('Near misses', state.nearMisses), appendResult('Longest blackout', `${state.longestBlackout.toFixed(2)} seconds`), appendResult('Total time impaired', `${state.totalImpaired.toFixed(2)} seconds`));
+      ui.results.replaceChildren(heading, list); ui.endModal.classList.remove('hidden');
+    }
+
+    function loop(now) {
+      if (state.running) { const dt = Math.min(0.05, Math.max(0, (now - state.lastTime) / 1000)); state.lastTime = now; update(dt); }
+      draw(); requestAnimationFrame(loop);
+    }
+
+    function bindTouch(button, keyName) {
+      const start = event => { event.preventDefault(); keys.add(keyName); button.setPointerCapture?.(event.pointerId); };
+      const end = event => { event.preventDefault(); keys.delete(keyName); };
+      button.addEventListener('pointerdown', start); button.addEventListener('pointerup', end); button.addEventListener('pointercancel', end); button.addEventListener('pointerleave', end);
+    }
+
+    document.addEventListener('keydown', event => {
+      if (['ArrowLeft', 'ArrowRight', 'a', 'A', 'd', 'D', 'w', 'W', 's', 'S'].includes(event.key)) event.preventDefault();
+      if ((event.key === 'p' || event.key === 'P' || event.key === 'Escape') && !event.repeat) { event.preventDefault(); togglePause(); return; }
+      keys.add(event.key);
+    });
+    document.addEventListener('keyup', event => keys.delete(event.key));
+    window.addEventListener('blur', () => { keys.clear(); if (state.running && !state.paused) togglePause(); });
+    bindTouch($('leftTouch'), 'touchLeft'); bindTouch($('rightTouch'), 'touchRight');
+    $('startBtn').addEventListener('click', () => { ui.startModal.classList.add('hidden'); ui.endModal.classList.add('hidden'); resetGame(); });
+    $('restartBtn').addEventListener('click', () => { ui.endModal.classList.add('hidden'); resetGame(); });
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas(); draw(); requestAnimationFrame(loop);
+  </script>
+</body>
+</html>
