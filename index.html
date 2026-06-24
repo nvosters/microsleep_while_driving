@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Microsleep — Fatigue Awareness Training</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="start-screen" class="overlay">
+    <div class="panel start-panel">
+      <div class="title-block">
+        <img src="assets/sprites/semi.png" alt="Bauer Built semi" class="title-semi" id="title-semi">
+        <div>
+          <h1>Microsleep</h1>
+          <p class="subtitle">Bauer Built — Fatigue Awareness Simulator</p>
+        </div>
+      </div>
+      <p class="brief">
+        Drive the <strong>Safety Raceway</strong> highway for <strong>120 seconds</strong>.
+        Dodge traffic, banana peels, and tire debris — but fatigue is the real enemy.
+      </p>
+      <p class="brief warning">
+        Microsleeps begin after 5 seconds. During a blackout you lose all control.
+        Coffee and loud music won't save you — only rest will.
+      </p>
+      <div class="controls-hint">
+        <span><kbd>A</kbd> <kbd>D</kbd> or <kbd>←</kbd> <kbd>→</kbd> to steer</span>
+        <span>Forward motion is automatic · Survive the full shift</span>
+      </div>
+      <button id="btn-start" type="button">Start Training Run</button>
+    </div>
+  </div>
+
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-brand">BAUER BUILT</div>
+      <div class="hud-stats">
+        <div class="hud-block">
+          <span class="label">Shift Time</span>
+          <span id="timer" class="value">2:00</span>
+        </div>
+        <div class="hud-block">
+          <span class="label">Speed</span>
+          <span class="value"><span id="speed">55</span> <small>MPH</small></span>
+        </div>
+        <div class="hud-block">
+          <span class="label">Score</span>
+          <span id="score" class="value score-val">0</span>
+        </div>
+      </div>
+    </div>
+    <div class="fatigue-row">
+      <span class="label">Fatigue</span>
+      <span id="fatigue-label" class="fatigue-status ok">Alert</span>
+      <div class="meter-track">
+        <div id="fatigue-fill" class="meter-fill"></div>
+      </div>
+    </div>
+    <div id="microsleep-warning" class="microsleep-warning hidden">
+      <strong>⚠ Microsleep!</strong>
+      <span>You lost control.</span>
+      <span>Fatigue is increasing.</span>
+      <span class="pull-over">Pull over and rest.</span>
+    </div>
+  </div>
+
+  <div id="countdown" class="countdown hidden">3</div>
+  <div id="blackout" class="blackout hidden"></div>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="end-screen" class="overlay hidden">
+    <div class="panel end-panel">
+      <h1>Training Debrief</h1>
+      <p class="grade" id="grade">—</p>
+      <p class="debrief-line">Fatigue reduces reaction time.</p>
+      <p class="debrief-line">Microsleeps can happen without warning.</p>
+      <p class="debrief-line">Even a one-second lapse can cause lane departure or collision.</p>
+      <p class="debrief-line">Coffee, loud music, and open windows are not substitutes for sleep.</p>
+      <p class="debrief-line emphasis">If you are too tired to drive safely, stop, rest, and notify your supervisor.</p>
+
+      <div class="stats-grid">
+        <div class="stat"><span class="stat-label">Final Score</span><span id="stat-score" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Microsleeps</span><span id="stat-microsleeps" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Off-track</span><span id="stat-offtrack" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Collisions</span><span id="stat-collisions" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Near misses</span><span id="stat-nearmiss" class="stat-value">0</span></div>
+        <div class="stat"><span class="stat-label">Longest blackout</span><span id="stat-longest" class="stat-value">0.0s</span></div>
+        <div class="stat wide"><span class="stat-label">Total time impaired</span><span id="stat-impaired" class="stat-value">0.0s</span></div>
+      </div>
+
+      <button id="btn-restart" type="button">Run Again</button>
+    </div>
+  </div>
+
+  <script src="js/road.js"></script>
+  <script src="js/entities.js"></script>
+  <script src="js/microsleep.js"></script>
+  <script src="js/sprites.js"></script>
+  <script src="js/effects.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/renderer.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
