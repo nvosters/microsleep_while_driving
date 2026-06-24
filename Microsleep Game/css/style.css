@@ -1,0 +1,285 @@
+/* Microsleep — Fatigue Awareness Training Game */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0a0a12;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #f0f0f0;
+}
+
+#game-canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+/* Full-screen overlays */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 20, 0.92);
+  z-index: 100;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.panel {
+  max-width: 560px;
+  padding: 2rem 2.5rem;
+  background: linear-gradient(160deg, #1a1f3a 0%, #0e1228 100%);
+  border: 3px solid #4a6cf7;
+  border-radius: 12px;
+  box-shadow: 0 0 40px rgba(74, 108, 247, 0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+  text-align: center;
+}
+
+.panel h1 {
+  font-size: 2.4rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffd54f;
+  text-shadow: 2px 2px 0 #c62828;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  font-size: 0.95rem;
+  color: #90caf9;
+  margin-bottom: 1.25rem;
+  letter-spacing: 0.04em;
+}
+
+.brief {
+  font-size: 0.95rem;
+  line-height: 1.55;
+  margin-bottom: 0.75rem;
+  color: #cfd8dc;
+}
+
+.brief.warning {
+  color: #ffab91;
+  border-left: 3px solid #ff7043;
+  padding-left: 0.75rem;
+  text-align: left;
+}
+
+.controls-hint {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: #90a4ae;
+  margin: 1.25rem 0 1.5rem;
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  margin: 0 0.1rem;
+  background: #263238;
+  border: 1px solid #546e7a;
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
+button {
+  cursor: pointer;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #fff;
+  background: linear-gradient(180deg, #5c6bc0 0%, #3949ab 100%);
+  border: 2px solid #7986cb;
+  border-radius: 8px;
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(92, 107, 192, 0.5);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+/* HUD */
+#hud {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem 1.5rem;
+  z-index: 50;
+  pointer-events: none;
+}
+
+#hud.hidden {
+  display: none;
+}
+
+.hud-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.hud-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.hud-block .label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #90caf9;
+}
+
+.hud-block .value {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  text-shadow: 2px 2px 0 rgba(0,0,0,0.5);
+}
+
+.fatigue-block {
+  flex: 1;
+  max-width: 280px;
+}
+
+.meter-track {
+  height: 18px;
+  background: #1a237e;
+  border: 2px solid #3949ab;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.meter-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #fdd835 0%, #ff6f00 50%, #d32f2f 100%);
+  transition: width 0.15s linear;
+}
+
+/* Post-microsleep warning banner */
+.microsleep-warning {
+  margin-top: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: rgba(198, 40, 40, 0.92);
+  border: 2px solid #ff5252;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  animation: flash-in 0.3s ease-out;
+}
+
+.microsleep-warning.hidden {
+  display: none;
+}
+
+.microsleep-warning .pull-over {
+  font-weight: 700;
+  color: #ffeb3b;
+}
+
+@keyframes flash-in {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Microsleep blackout */
+.blackout {
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.05s linear;
+}
+
+.blackout.active {
+  opacity: 1;
+}
+
+.blackout.hidden {
+  display: none;
+}
+
+/* End screen */
+.end-panel {
+  max-width: 620px;
+}
+
+.debrief-line {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin-bottom: 0.5rem;
+  color: #eceff1;
+  text-align: left;
+}
+
+.debrief-line.emphasis {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(198, 40, 40, 0.25);
+  border-left: 4px solid #ef5350;
+  font-weight: 600;
+  color: #ffccbc;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  text-align: left;
+}
+
+.stat {
+  background: rgba(0, 0, 0, 0.35);
+  padding: 0.6rem 0.85rem;
+  border-radius: 6px;
+  border: 1px solid #37474f;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #90a4ae;
+  margin-bottom: 0.2rem;
+}
+
+.stat-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffd54f;
+  font-variant-numeric: tabular-nums;
+}
