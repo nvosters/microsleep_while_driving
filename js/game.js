@@ -271,7 +271,9 @@
       requestAnimationFrame(gameLoop);
     } catch (err) {
       console.error('Start game error:', err);
-      alert('Could not start the game. Open the browser console (F12) for details.');
+      running = false;
+      startScreen.classList.remove('hidden');
+      btnStart.textContent = 'Start Training Run';
     }
   }
 
@@ -298,4 +300,7 @@
   });
 
   btnStart.textContent = 'Start Training Run';
+
+  const titleSemi = document.getElementById('title-semi');
+  if (titleSemi) titleSemi.src = Sprites.assetUrl('assets/sprites/semi.png');
 })();

@@ -59,7 +59,7 @@ const Road = (function () {
 
     while (segments.length < totalSegments) {
       const t = segments.length * 0.03;
-      addSegment(Math.sin(t) * 2.5 + Math.sin(t * 0.4) * 1.5, Math.sin(t * 0.7) * 200);
+      addSegment(segments, Math.sin(t) * 2.5 + Math.sin(t * 0.4) * 1.5, Math.sin(t * 0.7) * 200);
     }
 
     placeTrackContent(segments);

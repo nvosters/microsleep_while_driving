@@ -3,10 +3,24 @@
  */
 
 const Sprites = (function () {
+  /** Resolve asset path for GitHub Pages (root or /repo-name/ subfolder) */
+  function assetUrl(rel) {
+    const path = window.location.pathname;
+    const parts = path.split('/').filter(Boolean);
+    // Project page: /RepoName/ or /RepoName/index.html
+    if (parts.length > 0 && !parts[parts.length - 1].includes('.')) {
+      return '/' + parts[0] + '/' + rel;
+    }
+    if (parts.length > 1) {
+      return '/' + parts[0] + '/' + rel;
+    }
+    return rel;
+  }
+
   const PATHS = {
-    semi: 'assets/sprites/semi.png',
-    banana: 'assets/sprites/banana.png',
-    tire: 'assets/sprites/tire.png',
+    semi: assetUrl('assets/sprites/semi.png'),
+    banana: assetUrl('assets/sprites/banana.png'),
+    tire: assetUrl('assets/sprites/tire.png'),
   };
 
   const images = {};
@@ -117,6 +131,6 @@ const Sprites = (function () {
   }
 
   return {
-    loadAll, isReady, get, draw, drawBillboard, drawSemi, drawShadow,
+    loadAll, isReady, get, draw, drawBillboard, drawSemi, drawShadow, assetUrl,
   };
 })();
