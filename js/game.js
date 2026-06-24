@@ -302,5 +302,5 @@
   btnStart.textContent = 'Start Training Run';
 
   const titleSemi = document.getElementById('title-semi');
-  if (titleSemi) titleSemi.src = Sprites.assetUrl('assets/sprites/semi.png');
+  if (titleSemi) titleSemi.src = Sprites.assetUrl('assets/sprites/Semi.png');
 })();

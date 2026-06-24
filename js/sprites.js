@@ -3,10 +3,18 @@
  */
 
 const Sprites = (function () {
-  /** Resolve asset path for GitHub Pages (root or /repo-name/ subfolder) */
+  /** Resolve asset path for local file use, local servers, and GitHub Pages. */
   function assetUrl(rel) {
+    if (window.location.protocol === 'file:') return rel;
+
     const path = window.location.pathname;
     const parts = path.split('/').filter(Boolean);
+
+    // Root-hosted site, for example http://localhost:8000/index.html
+    if (parts.length === 0 || (parts.length === 1 && parts[0].includes('.'))) {
+      return rel;
+    }
+
     // Project page: /RepoName/ or /RepoName/index.html
     if (parts.length > 0 && !parts[parts.length - 1].includes('.')) {
       return '/' + parts[0] + '/' + rel;
@@ -18,9 +26,9 @@ const Sprites = (function () {
   }
 
   const PATHS = {
-    semi: assetUrl('assets/sprites/semi.png'),
-    banana: assetUrl('assets/sprites/banana.png'),
-    tire: assetUrl('assets/sprites/tire.png'),
+    semi: assetUrl('assets/sprites/Semi.png'),
+    banana: assetUrl('assets/sprites/Banana.png'),
+    tire: assetUrl('assets/sprites/Tire.png'),
   };
 
   const images = {};
