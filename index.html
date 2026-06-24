@@ -290,7 +290,7 @@
             <ul>
               <li>Automatic forward motion; steer with <strong>WASD</strong>, <strong>arrow keys</strong>, or touch buttons.</li>
               <li>Avoid banana peels and green shell roadway hazards; strike icons show impacts and near misses.</li>
-              <li>The full run lasts exactly <strong>120 seconds</strong>; microsleeps begin <strong>5 seconds</strong> after the race starts and become more frequent over time.</li>
+              <li>The full run lasts exactly <strong>120 seconds</strong>, and microsleeps begin <strong>5 seconds</strong> after the race starts.</li>
               <li>Use <strong>P</strong> or <strong>Esc</strong> to pause if you need a break.</li>
               <li>No copyrighted characters, names, music, logos, tracks, or assets are used.</li>
             </ul>
@@ -400,10 +400,10 @@
     }
 
     function microsleepGapFor(elapsed) {
-      if (elapsed < 30) return randomBetween(4, 5);
-      if (elapsed < 60) return randomBetween(3, 4);
-      if (elapsed < 90) return randomBetween(2, 3);
-      return randomBetween(1, 2);
+      if (elapsed < 30) return randomBetween(8, 12);
+      if (elapsed < 60) return randomBetween(5.5, 8);
+      if (elapsed < 90) return randomBetween(3.5, 5.3);
+      return randomBetween(1.8, 3);
     }
 
     function startMicrosleep() {
@@ -451,8 +451,7 @@
         (keys.has('ArrowLeft') || keys.has('a') || keys.has('A') || keys.has('touchLeft') ? 1 : 0);
 
       if (state.blackout) {
-        // During a microsleep the driver stops responding, but the game never steers for them.
-        state.steeringVelocity *= Math.pow(0.08, dt);
+        state.steeringVelocity += (Math.sin(state.elapsed * 5.5 + state.microsleeps) > 0 ? 1 : -1) * 0.95 * dt;
         if (state.elapsed >= state.blackoutUntil) endMicrosleep();
       } else {
         state.steeringVelocity += input * 2.6 * dt;
@@ -542,8 +541,8 @@
     function getRoadCurve(distance) { return Math.sin(distance * 0.0017) * 0.75 + Math.sin(distance * 0.0043) * 0.25; }
 
     function drawTrack() {
-      const horizon = height * 0.42, bottom = height, distance = state.distance || 0;
-      const center = width / 2, curve = getRoadCurve(distance) * width * 0.16;
+      const horizon = height * 0.42, bottom = height, playerX = state.playerX || 0, distance = state.distance || 0;
+      const center = width / 2 - playerX * width * 0.08, curve = getRoadCurve(distance) * width * 0.16;
       const leftTop = center - width * 0.12 + curve, rightTop = center + width * 0.12 + curve, leftBottom = width * 0.06, rightBottom = width * 0.94;
       ctx.fillStyle = '#2f6b35'; ctx.fillRect(0, horizon, width, bottom - horizon);
       const gradient = ctx.createLinearGradient(0, horizon, 0, bottom); gradient.addColorStop(0, '#6b7280'); gradient.addColorStop(0.45, '#4b5563'); gradient.addColorStop(1, '#2f3540');
@@ -569,7 +568,7 @@
     function projectKart(xNorm, yTrack) {
       const t = clamp((yTrack + 1250) / 1550, 0.05, 1), y = height * 0.42 + (height * 0.53) * t;
       const roadHalf = width * (0.12 + 0.38 * t), curve = getRoadCurve(state.distance + yTrack) * width * 0.16 * (1 - t);
-      return { x: width / 2 + curve + xNorm * roadHalf, y, scale: 0.25 + t * 1.35 };
+      return { x: width / 2 + curve + xNorm * roadHalf - state.playerX * width * 0.03 * (1 - t), y, scale: 0.25 + t * 1.35 };
     }
 
     function drawHazards() {
@@ -582,10 +581,7 @@
       [...source].sort((a, b) => a.y - b.y).forEach(kart => { const p = projectKart(kart.x, kart.y); if (p.y >= height * 0.42 && p.y <= height + 120) drawKart(p.x, p.y, p.scale, kart.color, '#111827', false); });
     }
 
-    function drawPlayerKart() {
-      const playerScreenX = width / 2 + state.playerX * width * 0.285;
-      drawKart(playerScreenX, height * 0.78 + Math.sin(state.distance * 0.04) * 3, 1.32, '#ffd23f', '#7c3aed', true);
-    }
+    function drawPlayerKart() { drawKart(width / 2, height * 0.78 + Math.sin(state.distance * 0.04) * 3, 1.32, '#ffd23f', '#7c3aed', true); }
 
     function drawStrikeIcons() {
       state.strikeIcons.forEach(icon => { const alpha = Math.max(0, 1 - icon.age / 1.8), pop = 1 + Math.sin(icon.age * Math.PI * 4) * 0.08; ctx.save(); ctx.globalAlpha = alpha; ctx.translate(width * icon.x, height * (icon.y - icon.age * 0.06)); ctx.scale(pop, pop); ctx.fillStyle = icon.color; ctx.strokeStyle = '#111827'; ctx.lineWidth = 5; ctx.beginPath(); for (let i = 0; i < 12; i += 1) { const angle = Math.PI * 2 * i / 12, radius = i % 2 ? 44 : 58; ctx.lineTo(Math.cos(angle) * radius, Math.sin(angle) * radius); } ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.fillStyle = 'white'; ctx.font = '900 17px Arial'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(icon.label, 0, 0); ctx.restore(); });
